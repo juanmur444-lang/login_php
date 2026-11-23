@@ -42,6 +42,17 @@ if (strlen($nombre) < 3) {
     exit();
 }
 
+// La misma regla que en validaciones.js, pero en el servidor,
+// porque la validación del navegador se puede saltar
+if (!preg_match("/^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$/u", $nombre)) {
+
+    $_SESSION['error'] =
+    "El nombre solo puede contener letras";
+
+    header("Location: register.php");
+    exit();
+}
+
 if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
 
     $_SESSION['error'] =
@@ -69,14 +80,24 @@ if ($password != $confirmarPassword) {
     exit();
 }
 
+// Consultas preparadas: los datos del usuario viajan aparte del SQL
+// (evita inyección SQL)
 $consulta =
-"SELECT * FROM usuarios
-WHERE correo='$correo'";
+mysqli_prepare(
+    $conexion,
+    "SELECT id FROM usuarios WHERE correo = ?"
+);
 
-$resultado =
-mysqli_query($conexion, $consulta);
+mysqli_stmt_bind_param($consulta, "s", $correo);
+mysqli_stmt_execute($consulta);
+mysqli_stmt_store_result($consulta);
 
-if (mysqli_num_rows($resultado) > 0) {
+$yaExiste =
+mysqli_stmt_num_rows($consulta) > 0;
+
+mysqli_stmt_close($consulta);
+
+if ($yaExiste) {
 
     $_SESSION['error'] =
     "El correo ya está registrado";
@@ -88,13 +109,21 @@ if (mysqli_num_rows($resultado) > 0) {
 $passwordHash =
 password_hash($password, PASSWORD_DEFAULT);
 
-$sql =
-"INSERT INTO usuarios
-(nombre, correo, password)
-VALUES
-('$nombre','$correo','$passwordHash')";
+$insertar =
+mysqli_prepare(
+    $conexion,
+    "INSERT INTO usuarios (nombre, correo, password) VALUES (?, ?, ?)"
+);
 
-if (mysqli_query($conexion, $sql)) {
+mysqli_stmt_bind_param(
+    $insertar,
+    "sss",
+    $nombre,
+    $correo,
+    $passwordHash
+);
+
+if (mysqli_stmt_execute($insertar)) {
 
     $_SESSION['mensaje'] =
     "Registro exitoso. Ahora puede iniciar sesión.";

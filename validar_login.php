@@ -36,50 +36,52 @@ if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
     exit();
 }
 
-$sql =
-"SELECT * FROM usuarios
-WHERE correo='$correo'";
+// Consulta preparada: el correo viaja aparte del SQL,
+// así nunca se interpreta como parte de la consulta (evita inyección SQL)
+$consulta =
+mysqli_prepare(
+    $conexion,
+    "SELECT id, nombre, password FROM usuarios WHERE correo = ?"
+);
+
+mysqli_stmt_bind_param($consulta, "s", $correo);
+mysqli_stmt_execute($consulta);
 
 $resultado =
-mysqli_query($conexion, $sql);
+mysqli_stmt_get_result($consulta);
 
-if (mysqli_num_rows($resultado) == 1) {
+$usuario =
+mysqli_fetch_assoc($resultado);
 
-    $usuario =
-    mysqli_fetch_assoc($resultado);
+mysqli_stmt_close($consulta);
 
-    if (
-        password_verify(
-            $password,
-            $usuario['password']
-        )
-    ) {
+if (
+    $usuario &&
+    password_verify(
+        $password,
+        $usuario['password']
+    )
+) {
 
-        $_SESSION['id'] =
-        $usuario['id'];
+    // Nuevo id de sesión al iniciar sesión (evita fijación de sesión)
+    session_regenerate_id(true);
 
-        $_SESSION['nombre'] =
-        $usuario['nombre'];
+    $_SESSION['id'] =
+    $usuario['id'];
 
-        header("Location: dashboard.php");
-        exit();
+    $_SESSION['nombre'] =
+    $usuario['nombre'];
 
-    } else {
-
-        $_SESSION['error'] =
-        "Contraseña incorrecta";
-
-        header("Location: login.php");
-        exit();
-    }
-
-} else {
-
-    $_SESSION['error'] =
-    "Usuario no encontrado";
-
-    header("Location: login.php");
+    header("Location: dashboard.php");
     exit();
 }
+
+// El mismo mensaje para correo o contraseña incorrectos:
+// así nadie puede averiguar qué correos están registrados
+$_SESSION['error'] =
+"Correo o contraseña incorrectos";
+
+header("Location: login.php");
+exit();
 
 ?>

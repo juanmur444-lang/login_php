@@ -29,7 +29,11 @@ if (!isset($_SESSION['id'])) {
     <h1>Bienvenido</h1>
 
     <h3>
-        <?php echo $_SESSION['nombre']; ?>
+        <?php
+        // htmlspecialchars convierte < > " ' & en texto,
+        // así un nombre con código no se ejecuta (evita XSS)
+        echo htmlspecialchars($_SESSION['nombre'], ENT_QUOTES, 'UTF-8');
+        ?>
     </h3>
 
     <a href="logout.php">

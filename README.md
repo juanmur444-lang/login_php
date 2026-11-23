@@ -15,6 +15,20 @@ Práctica académica del Tecnólogo en Análisis y Desarrollo de Software (ADSO)
 - Página privada (`dashboard.php`) que solo se ve con la sesión iniciada.
 - Cierre de sesión.
 
+## Seguridad
+
+Revisé el proyecto y corregí estos problemas:
+
+| Problema | Riesgo | Corrección |
+|---|---|---|
+| El SQL se armaba pegando el correo y el nombre que escribe el usuario | Inyección SQL: alguien podía alterar la consulta | Consultas preparadas con `mysqli_prepare` y `?`, en el login y en el registro |
+| El nombre se mostraba en el dashboard tal como estaba guardado | XSS: un nombre con código se ejecutaba en el navegador | `htmlspecialchars` antes de mostrarlo |
+| La sesión mantenía el mismo id antes y después de iniciar sesión | Fijación de sesión | `session_regenerate_id(true)` al iniciar sesión |
+| Mensajes distintos para "usuario no encontrado" y "contraseña incorrecta" | Permitía averiguar qué correos están registrados | Un solo mensaje: "Correo o contraseña incorrectos" |
+| La regla "nombre solo letras" existía solo en JavaScript | Se podía saltar enviando la petición directo | La misma validación también en PHP |
+
+Lo probé con registro y login normales, correo repetido, un intento de inyección SQL en el correo, un nombre con `<script>` y el acceso al dashboard sin sesión.
+
 ## Tecnologías
 
 - PHP
@@ -50,13 +64,13 @@ Si tu MySQL tiene otro usuario o contraseña, cámbialos en `conexion.php`.
 - Guardar contraseñas de forma segura con hash.
 - Validar datos en el navegador y otra vez en el servidor, porque la validación del navegador se puede saltar.
 - Proteger páginas privadas revisando la sesión.
+- Encontrar y corregir vulnerabilidades comunes: inyección SQL, XSS y fijación de sesión.
 
 ## Mejoras pendientes
 
-- Usar consultas preparadas (`mysqli_prepare`) en lugar de armar el SQL con el texto del usuario, para evitar inyección SQL.
-- Escapar el nombre con `htmlspecialchars` al mostrarlo en el dashboard, para evitar XSS.
-- Regenerar el id de sesión al iniciar sesión (`session_regenerate_id`).
 - Limitar los intentos de inicio de sesión fallidos.
+- Agregar un token CSRF a los formularios.
+- Leer los datos de conexión desde variables de entorno en lugar de escribirlos en `conexion.php`.
 
 ## Autor
 
